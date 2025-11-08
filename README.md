@@ -138,7 +138,7 @@ npm run dev
 2. Create a new project
 3. Enable Google+ API
 4. Create OAuth 2.0 credentials
-5. Add authorized origins: `http://localhost:5173`, `http://localhost:5000`
+5. Add authorized origins: 
 6. Copy Client ID and update .env files
 
 See [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md) for detailed instructions.
