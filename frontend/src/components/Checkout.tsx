@@ -22,6 +22,11 @@ export function Checkout() {
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
   const [razorpayLoaded, setRazorpayLoaded] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoError, setPromoError] = useState('');
+  const [isFirstOrder, setIsFirstOrder] = useState(false);
+  const [checkingFirstOrder, setCheckingFirstOrder] = useState(true);
   
   // Address form state
   const [address, setAddress] = useState({
@@ -36,14 +41,39 @@ export function Checkout() {
   });
 
   const subtotal = getCartTotal();
-  const shipping = subtotal > 999 ? 0 : 99;
+  const baseShipping = subtotal > 999 ? 0 : 99;
+  const shipping = promoApplied ? 0 : baseShipping;
   const discount = 0;
   const total = subtotal + shipping - discount;
 
   useEffect(() => {
     loadSavedAddresses();
     loadRazorpayScript();
+    checkIfFirstOrder();
   }, []);
+
+  const checkIfFirstOrder = async () => {
+    try {
+      const response = await api.get('/orders/my-orders');
+      const orders = response.data.orders || [];
+      
+      // Check if user has any completed orders
+      const hasCompletedOrders = orders.some((order: any) => 
+        order.paymentStatus === 'paid' || order.status === 'delivered'
+      );
+      
+      if (!hasCompletedOrders && orders.length === 0) {
+        setIsFirstOrder(true);
+        // Auto-apply first order promo
+        setPromoCode('FIRST2024');
+        setPromoApplied(true);
+      }
+    } catch (error) {
+      console.error('Failed to check order history:', error);
+    } finally {
+      setCheckingFirstOrder(false);
+    }
+  };
 
   const loadRazorpayScript = () => {
     const script = document.createElement('script');
@@ -77,6 +107,24 @@ export function Checkout() {
       ...address,
       [e.target.name]: e.target.value,
     });
+  };
+
+  const handleApplyPromo = () => {
+    const validPromoCodes = ['FREESHIP', 'FREESHIP2024', 'NODELIVERY', 'FIRST2024'];
+    
+    if (validPromoCodes.includes(promoCode.toUpperCase())) {
+      setPromoApplied(true);
+      setPromoError('');
+    } else {
+      setPromoApplied(false);
+      setPromoError('Invalid promo code');
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoCode('');
+    setPromoApplied(false);
+    setPromoError('');
   };
 
   const getSelectedAddress = () => {
@@ -486,6 +534,76 @@ export function Checkout() {
             <div className="bg-white rounded-2xl p-6 shadow-md sticky top-24">
               <h3 className="text-[#1E1E1E] uppercase mb-6">Order Summary</h3>
 
+              {/* First Order Banner */}
+              {isFirstOrder && !checkingFirstOrder && (
+                <div className="mb-6 p-4 bg-gradient-to-r from-[#FF3B30] to-[#FF6B30] rounded-lg text-white">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-2xl">🎉</span>
+                    <h4 className="font-bold text-lg">First Order Special!</h4>
+                  </div>
+                  <p className="text-sm mb-2">
+                    Welcome! Enjoy FREE delivery on your first order with code <strong>FIRST2024</strong>
+                  </p>
+                  <p className="text-xs opacity-90">
+                    Already applied to your order ✓
+                  </p>
+                </div>
+              )}
+
+              {/* Promo Code Section */}
+              <div className="mb-6">
+                <label className="text-[#1E1E1E] font-semibold mb-2 block">Promo Code</label>
+                {promoApplied ? (
+                  <div className="flex items-center justify-between p-3 bg-green-50 border-2 border-green-500 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-700 font-semibold">{promoCode.toUpperCase()}</span>
+                      <span className="text-green-600 text-sm">✓ Applied</span>
+                      {isFirstOrder && promoCode.toUpperCase() === 'FIRST2024' && (
+                        <span className="px-2 py-0.5 bg-[#FF3B30] text-white text-xs rounded-full">
+                          First Order
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePromo}
+                      className="text-red-600 hover:text-red-700 text-sm font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode(e.target.value);
+                          setPromoError('');
+                        }}
+                        placeholder="Enter promo code"
+                        className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-[#FF3B30] focus:outline-none uppercase"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyPromo}
+                        disabled={!promoCode.trim()}
+                        className="px-6 py-2 bg-[#FF3B30] text-white rounded-lg hover:bg-[#007AFF] transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {promoError && (
+                      <p className="text-red-600 text-sm">{promoError}</p>
+                    )}
+                    <p className="text-gray-500 text-xs">
+                      {isFirstOrder ? 'Use FIRST2024 for free delivery on your first order' : 'Try: FREESHIP for free delivery'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
@@ -493,12 +611,27 @@ export function Checkout() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="text-[#1E1E1E]">{shipping === 0 ? 'FREE' : `₹${shipping}`}</span>
+                  <div className="text-right">
+                    {promoApplied && baseShipping > 0 ? (
+                      <>
+                        <span className="text-gray-400 line-through mr-2">₹{baseShipping}</span>
+                        <span className="text-green-600 font-semibold">FREE</span>
+                      </>
+                    ) : (
+                      <span className="text-[#1E1E1E]">{shipping === 0 ? 'FREE' : `₹${shipping}`}</span>
+                    )}
+                  </div>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Discount</span>
                   <span className="text-[#FF3B30]">-₹{discount}</span>
                 </div>
+                {promoApplied && baseShipping > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="font-medium">Promo Savings</span>
+                    <span className="font-semibold">-₹{baseShipping}</span>
+                  </div>
+                )}
               </div>
 
               <div className="border-t-2 border-gray-200 pt-4 mb-6">
