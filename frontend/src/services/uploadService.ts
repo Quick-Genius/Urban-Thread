@@ -1,15 +1,4 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-
-const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
+import api from './api';
 
 // Convert file to base64
 const fileToBase64 = (file: File): Promise<string> => {
@@ -23,24 +12,18 @@ const fileToBase64 = (file: File): Promise<string> => {
 
 // Get ImageKit auth parameters
 export const getAuthParams = async () => {
-  const response = await axios.get(`${API_URL}/upload/auth`, getAuthHeader());
+  const response = await api.get('/upload/auth');
   return response.data;
 };
 
 // Upload single image
 export const uploadImage = async (file: File, folder: string = '/products') => {
   const base64 = await fileToBase64(file);
-  
-  const response = await axios.post(
-    `${API_URL}/upload`,
-    {
-      file: base64,
-      fileName: file.name,
-      folder,
-    },
-    getAuthHeader()
-  );
-  
+  const response = await api.post('/upload', {
+    file: base64,
+    fileName: file.name,
+    folder,
+  });
   return response.data;
 };
 
@@ -52,25 +35,16 @@ export const uploadMultipleImages = async (files: File[], folder: string = '/pro
       name: file.name,
     }))
   );
-
-  const response = await axios.post(
-    `${API_URL}/upload/multiple`,
-    {
-      files: base64Files,
-      folder,
-    },
-    getAuthHeader()
-  );
-
+  const response = await api.post('/upload/multiple', {
+    files: base64Files,
+    folder,
+  });
   return response.data;
 };
 
 // Delete image
 export const deleteImage = async (fileId: string) => {
-  const response = await axios.delete(
-    `${API_URL}/upload/${fileId}`,
-    getAuthHeader()
-  );
+  const response = await api.delete(`/upload/${fileId}`);
   return response.data;
 };
 

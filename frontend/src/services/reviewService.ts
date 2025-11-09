@@ -1,44 +1,22 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-
-const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
+import api from './api';
 
 export const getProductReviews = async (productId: string) => {
-  const response = await axios.get(`${API_URL}/reviews/${productId}`);
+  const response = await api.get(`/reviews/${productId}`);
   return response.data;
 };
 
 export const createReview = async (productId: string, reviewData: { rating: number; comment: string }) => {
-  const response = await axios.post(
-    `${API_URL}/reviews/${productId}`,
-    reviewData,
-    getAuthHeader()
-  );
+  const response = await api.post(`/reviews/${productId}`, reviewData);
   return response.data;
 };
 
 export const updateReview = async (reviewId: string, reviewData: { rating: number; comment: string }) => {
-  const response = await axios.put(
-    `${API_URL}/reviews/${reviewId}`,
-    reviewData,
-    getAuthHeader()
-  );
+  const response = await api.put(`/reviews/${reviewId}`, reviewData);
   return response.data;
 };
 
 export const deleteReview = async (reviewId: string) => {
-  const response = await axios.delete(
-    `${API_URL}/reviews/${reviewId}`,
-    getAuthHeader()
-  );
+  const response = await api.delete(`/reviews/${reviewId}`);
   return response.data;
 };
 

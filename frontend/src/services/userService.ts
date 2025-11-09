@@ -1,23 +1,12 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-
-const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
+import api from './api';
 
 export const updateProfile = async (profileData: any) => {
-  const response = await axios.put(`${API_URL}/users/profile`, profileData, getAuthHeader());
+  const response = await api.put('/users/profile', profileData);
   return response.data;
 };
 
 export const updatePassword = async (passwordData: any) => {
-  const response = await axios.put(`${API_URL}/users/password`, passwordData, getAuthHeader());
+  const response = await api.put('/users/password', passwordData);
   return response.data;
 };
 

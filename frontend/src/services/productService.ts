@@ -1,6 +1,4 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+import api from './api';
 
 export const getAllProducts = async (params?: {
   category?: string;
@@ -11,26 +9,22 @@ export const getAllProducts = async (params?: {
   search?: string;
   sort?: string;
 }) => {
-  const response = await axios.get(`${API_URL}/products`, { params });
+  const response = await api.get('/products', { params });
   return response.data;
 };
 
 export const getProductById = async (id: string) => {
-  const response = await axios.get(`${API_URL}/products/${id}`);
+  const response = await api.get(`/products/${id}`);
   return response.data;
 };
 
 export const getProductsByCategory = async (category: string) => {
-  const response = await axios.get(`${API_URL}/products`, {
-    params: { category },
-  });
+  const response = await api.get('/products', { params: { category } });
   return response.data;
 };
 
 export const searchProducts = async (query: string) => {
-  const response = await axios.get(`${API_URL}/products`, {
-    params: { search: query },
-  });
+  const response = await api.get('/products', { params: { search: query } });
   return response.data;
 };
 

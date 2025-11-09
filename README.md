@@ -65,9 +65,16 @@ PORT=5000
 
 **Frontend (.env):**
 ```env
+# Backend API URL - Change this for production deployment
 VITE_API_URL=http://localhost:5000/api
+
+# For production, use your deployed backend URL:
+# VITE_API_URL=https://your-backend-url.com/api
+
 VITE_GOOGLE_CLIENT_ID="your-google-client-id"
 ```
+
+> **Note:** Copy `frontend/.env.example` to `frontend/.env` and update the values. The `.env` file is gitignored for security.
 
 4. **Test MongoDB connection**
 ```bash

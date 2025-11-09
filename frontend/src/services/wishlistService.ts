@@ -1,35 +1,17 @@
-import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-
-const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
-  return {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  };
-};
+import api from './api';
 
 export const getWishlist = async () => {
-  const response = await axios.get(`${API_URL}/wishlist`, getAuthHeader());
+  const response = await api.get('/wishlist');
   return response.data;
 };
 
 export const addToWishlist = async (productId: string) => {
-  const response = await axios.post(
-    `${API_URL}/wishlist/${productId}`,
-    {},
-    getAuthHeader()
-  );
+  const response = await api.post(`/wishlist/${productId}`, {});
   return response.data;
 };
 
 export const removeFromWishlist = async (productId: string) => {
-  const response = await axios.delete(
-    `${API_URL}/wishlist/${productId}`,
-    getAuthHeader()
-  );
+  const response = await api.delete(`/wishlist/${productId}`);
   return response.data;
 };
 
