@@ -3,18 +3,7 @@ import { Plus, Search, Loader2, AlertCircle } from 'lucide-react';
 import { ProductFormModal } from './ProductFormModal';
 import { ProductRow } from './ProductRow';
 import adminService from '../../services/adminService';
-
-interface Product {
-  _id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  stock: number;
-  sku: string;
-  images: string[];
-  sizes?: string[];
-}
+import { Product } from '../../types/product';
 
 export function AdminProductsTab() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -65,7 +54,7 @@ export function AdminProductsTab() {
 
   const handleCreateProduct = async (productData: Product) => {
     try {
-      const response = await fetch('http://localhost:5001/api/admin/products', {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +78,7 @@ export function AdminProductsTab() {
 
   const handleUpdateProduct = async (productData: Product) => {
     try {
-      const response = await fetch(`http://localhost:5001/api/admin/products/${productData._id}`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/admin/products/${productData._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

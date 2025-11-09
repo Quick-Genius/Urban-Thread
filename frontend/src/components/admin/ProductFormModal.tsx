@@ -1,18 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Upload, Loader2 } from 'lucide-react';
 import uploadService from '../../services/uploadService';
-
-interface Product {
-  _id?: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  stock: number;
-  sku: string;
-  images: string[];
-  sizes?: string[];
-}
+import { Product } from '../../types/product';
 
 interface ProductFormModalProps {
   isOpen: boolean;

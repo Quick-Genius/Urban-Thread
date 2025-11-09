@@ -1,14 +1,5 @@
 import { Edit, Trash2 } from 'lucide-react';
-
-interface Product {
-  _id: string;
-  name: string;
-  price: number;
-  category: string;
-  stock: number;
-  images: string[];
-  sku: string;
-}
+import { Product } from '../../types/product';
 
 interface ProductRowProps {
   product: Product;
@@ -61,7 +52,7 @@ export function ProductRow({ product, onEdit, onDelete }: ProductRowProps) {
             <Edit className="w-5 h-5" />
           </button>
           <button
-            onClick={() => onDelete(product._id)}
+            onClick={() => product._id && onDelete(product._id)}
             className="p-2 text-[#FF3B30] hover:bg-red-50 rounded-lg transition-colors"
             title="Delete product"
           >
