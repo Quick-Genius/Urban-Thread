@@ -7,6 +7,8 @@ import { ImageWithFallback } from './figma/ImageWithFallback';
 export function Cart() {
   const { cartItems, removeFromCart, updateQuantity, getCartTotal, loading } = useCart();
   const [promoCode, setPromoCode] = useState('');
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoError, setPromoError] = useState('');
 
   const handleUpdateQuantity = async (itemId: string, newQuantity: number) => {
     try {
@@ -24,8 +26,27 @@ export function Cart() {
     }
   };
 
+  const handleApplyPromo = () => {
+    const validPromoCodes = ['FREESHIP', 'FREESHIP2024', 'NODELIVERY', 'FIRST2024'];
+    
+    if (validPromoCodes.includes(promoCode.toUpperCase())) {
+      setPromoApplied(true);
+      setPromoError('');
+    } else {
+      setPromoApplied(false);
+      setPromoError('Invalid promo code');
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoCode('');
+    setPromoApplied(false);
+    setPromoError('');
+  };
+
   const subtotal = getCartTotal();
-  const shipping = subtotal >= 999 ? 0 : 99;
+  const baseShipping = subtotal >= 999 ? 0 : 99;
+  const shipping = promoApplied ? 0 : baseShipping;
   const discount = 0;
   const total = subtotal + shipping - discount;
 
@@ -113,19 +134,51 @@ export function Cart() {
 
               {/* Promo Code */}
               <div className="mb-6">
-                <label className="text-[#1E1E1E] mb-2 block">Promo Code</label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    placeholder="Enter code"
-                    className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-[#FF3B30] focus:outline-none"
-                  />
-                  <button className="px-4 py-2 bg-[#1E1E1E] text-white rounded-lg hover:bg-[#FF3B30] transition-colors">
-                    Apply
-                  </button>
-                </div>
+                <label className="text-[#1E1E1E] font-semibold mb-2 block">Promo Code</label>
+                {promoApplied ? (
+                  <div className="flex items-center justify-between p-3 bg-green-50 border-2 border-green-500 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      <span className="text-green-700 font-semibold">{promoCode.toUpperCase()}</span>
+                      <span className="text-green-600 text-sm">✓ Applied</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemovePromo}
+                      className="text-red-600 hover:text-red-700 text-sm font-medium"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode(e.target.value);
+                          setPromoError('');
+                        }}
+                        placeholder="Enter promo code"
+                        className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-[#FF3B30] focus:outline-none uppercase"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleApplyPromo}
+                        disabled={!promoCode.trim()}
+                        className="px-4 py-2 bg-[#FF3B30] text-white rounded-lg hover:bg-[#007AFF] transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
+                      >
+                        Apply
+                      </button>
+                    </div>
+                    {promoError && (
+                      <p className="text-red-600 text-sm">{promoError}</p>
+                    )}
+                    <p className="text-gray-500 text-xs">
+                      Try: FREESHIP for free delivery
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* Price Breakdown */}
@@ -136,9 +189,18 @@ export function Cart() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <span className="text-[#1E1E1E]">
-                    {shipping === 0 ? 'FREE' : `₹${shipping}`}
-                  </span>
+                  <div className="text-right">
+                    {promoApplied && baseShipping > 0 ? (
+                      <>
+                        <span className="text-gray-400 line-through mr-2">₹{baseShipping}</span>
+                        <span className="text-green-600 font-semibold">FREE</span>
+                      </>
+                    ) : (
+                      <span className="text-[#1E1E1E]">
+                        {shipping === 0 ? 'FREE' : `₹${shipping}`}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {discount > 0 && (
                   <div className="flex justify-between text-[#FF3B30]">
@@ -146,9 +208,15 @@ export function Cart() {
                     <span>-₹{discount}</span>
                   </div>
                 )}
-                {subtotal < 999 && (
-                  <p className="text-gray-600">
-                    Add ₹{999 - subtotal} more for FREE shipping!
+                {promoApplied && baseShipping > 0 && (
+                  <div className="flex justify-between text-green-600">
+                    <span className="font-medium">Promo Savings</span>
+                    <span className="font-semibold">-₹{baseShipping}</span>
+                  </div>
+                )}
+                {!promoApplied && subtotal < 999 && (
+                  <p className="text-sm text-gray-600 bg-blue-50 p-2 rounded">
+                    💡 Add ₹{999 - subtotal} more for FREE shipping!
                   </p>
                 )}
               </div>

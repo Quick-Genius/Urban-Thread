@@ -27,7 +27,31 @@ export function SignIn() {
   useEffect(() => {
     const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
     
-    // Load Google Sign-In script even if not configured
+    if (!googleClientId || googleClientId === 'your-google-client-id') {
+      return;
+    }
+
+    // Check if script already exists
+    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    
+    if (existingScript) {
+      // Script already loaded, just initialize
+      if (window.google) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleGoogleResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+        } catch (error) {
+          console.error('Google Sign-In initialization error:', error);
+        }
+      }
+      return;
+    }
+
+    // Load Google Sign-In script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
@@ -35,18 +59,26 @@ export function SignIn() {
     document.body.appendChild(script);
 
     script.onload = () => {
-      if (window.google && googleClientId && googleClientId !== 'your-google-client-id') {
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: handleGoogleResponse,
-        });
+      if (window.google) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: googleClientId,
+            callback: handleGoogleResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+        } catch (error) {
+          console.error('Google Sign-In initialization error:', error);
+        }
       }
     };
 
+    script.onerror = () => {
+      console.error('Failed to load Google Sign-In script');
+    };
+
     return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
+      // Don't remove script on unmount to avoid reloading
     };
   }, []);
 
@@ -87,7 +119,36 @@ export function SignIn() {
     }
     
     if (window.google) {
-      window.google.accounts.id.prompt();
+      try {
+        // Create a hidden div to render the Google button
+        const existingDiv = document.getElementById('google-signin-button-hidden');
+        if (existingDiv) {
+          existingDiv.remove();
+        }
+
+        const buttonDiv = document.createElement('div');
+        buttonDiv.id = 'google-signin-button-hidden';
+        buttonDiv.style.position = 'absolute';
+        buttonDiv.style.opacity = '0';
+        buttonDiv.style.pointerEvents = 'none';
+        document.body.appendChild(buttonDiv);
+
+        window.google.accounts.id.renderButton(buttonDiv, {
+          theme: 'outline',
+          size: 'large',
+        });
+
+        // Trigger click on the rendered button
+        setTimeout(() => {
+          const googleButton = buttonDiv.querySelector('div[role="button"]');
+          if (googleButton) {
+            (googleButton as HTMLElement).click();
+          }
+        }, 100);
+      } catch (error) {
+        console.error('Google Sign-In error:', error);
+        setError('Failed to initialize Google Sign-In. Please try again.');
+      }
     } else {
       setError('Google Sign-In is loading. Please try again in a moment.');
     }
