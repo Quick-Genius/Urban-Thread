@@ -6,23 +6,50 @@ const { protect } = require('../middleware/auth');
 const Order = require('../models/Order');
 
 // Initialize Razorpay instance
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
-});
+let razorpay;
+try {
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    console.error('⚠️  Razorpay credentials not found in environment variables');
+  } else {
+    razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
+    console.log('✅ Razorpay initialized successfully');
+  }
+} catch (error) {
+  console.error('❌ Failed to initialize Razorpay:', error.message);
+}
 
 // Create Razorpay order
 router.post('/create-order', protect, async (req, res) => {
   try {
+    if (!razorpay) {
+      console.error('Razorpay not initialized');
+      return res.status(500).json({
+        success: false,
+        message: 'Payment service not configured. Please contact support.',
+      });
+    }
+
     const { amount, currency = 'INR' } = req.body;
 
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid amount',
+      });
+    }
+
     const options = {
-      amount: amount * 100, // Razorpay expects amount in paise
+      amount: Math.round(amount * 100), // Razorpay expects amount in paise
       currency,
       receipt: `receipt_${Date.now()}`,
     };
 
+    console.log('Creating Razorpay order with options:', options);
     const order = await razorpay.orders.create(options);
+    console.log('Razorpay order created successfully:', order.id);
 
     res.json({
       success: true,
