@@ -1,275 +1,212 @@
-# UrbanThread E-Commerce Platform
+# UrbanThread
 
-A modern, full-stack e-commerce platform built with React, Node.js, Express, and MongoDB.
-
-## 🎯 Features
-
-### Authentication
-- ✅ JWT-based authentication
-- ✅ Google OAuth integration
-- ✅ Secure password hashing
-- ✅ Protected routes
-- ✅ Role-based access control
-
-### User Features
-- User registration and login
-- Google Sign-In
-- User dashboard
-- Profile management
-- Order tracking
-- Wishlist
-- Shopping cart
-
-### Additional Pages
-- Contact Us
-- Privacy Policy
-- Help Center (with Refund Policy)
-- Track Order
-
-## 🚀 Quick Start
-
-### Prerequisites
-- Node.js (v16 or higher)
-- MongoDB Atlas account
-- Google OAuth credentials (optional)
-
-### Installation
-
-1. **Clone the repository**
-```bash
-git clone <repository-url>
-cd Urban-Thread
-```
-
-2. **Install dependencies**
-```bash
-# Backend
-cd backend
-npm install
-
-# Frontend
-cd ../frontend
-npm install
-```
-
-3. **Set up environment variables**
-
-**Backend (.env):**
-```env
-MONGO_URI="your-mongodb-connection-string"
-JWT_SECRET="your-jwt-secret"
-JWT_EXPIRE="7d"
-GOOGLE_CLIENT_ID="your-google-client-id"
-PORT=5000
-```
-
-**Frontend (.env):**
-```env
-# Backend API URL - Change this for production deployment
-VITE_API_URL=http://localhost:5000/api
-
-# For production, use your deployed backend URL:
-# VITE_API_URL=https://your-backend-url.com/api
-
-VITE_GOOGLE_CLIENT_ID="your-google-client-id"
-```
-
-> **Note:** Copy `frontend/.env.example` to `frontend/.env` and update the values. The `.env` file is gitignored for security.
-
-4. **Test MongoDB connection**
-```bash
-cd backend
-node testConnection.js
-```
-
-5. **Start development servers**
-
-**Option 1: Using the start script (recommended)**
-```bash
-./start-dev.sh
-```
-
-**Option 2: Manual start**
-```bash
-# Terminal 1 - Backend
-cd backend
-npm run dev
-
-# Terminal 2 - Frontend
-cd frontend
-npm run dev
-```
-
-## 📡 API Endpoints
-
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - Login user
-- `POST /api/auth/google` - Google OAuth
-- `GET /api/auth/me` - Get current user (protected)
-- `POST /api/auth/logout` - Logout user (protected)
-
-### Users
-- `GET /api/users` - Get all users (admin)
-- `GET /api/users/:id` - Get user by ID
-- `PUT /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Delete user
-
-### Products
-- `GET /api/products` - Get all products
-- `GET /api/products/:id` - Get product by ID
-- `POST /api/products` - Create product (seller/admin)
-- `PUT /api/products/:id` - Update product (seller/admin)
-- `DELETE /api/products/:id` - Delete product (seller/admin)
-
-### Orders
-- `GET /api/orders` - Get user orders
-- `GET /api/orders/:id` - Get order by ID
-- `POST /api/orders` - Create order
-- `PUT /api/orders/:id` - Update order status
-
-### Cart
-- `GET /api/cart` - Get user cart
-- `POST /api/cart` - Add to cart
-- `PUT /api/cart/:id` - Update cart item
-- `DELETE /api/cart/:id` - Remove from cart
-
-### Wishlist
-- `GET /api/wishlist` - Get user wishlist
-- `POST /api/wishlist` - Add to wishlist
-- `DELETE /api/wishlist/:id` - Remove from wishlist
-
-## 🔐 Google OAuth Setup
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project
-3. Enable Google+ API
-4. Create OAuth 2.0 credentials
-5. Add authorized origins: 
-6. Copy Client ID and update .env files
-
-See [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md) for detailed instructions.
-
-## 🛠️ Tech Stack
-
-### Frontend
-- React 18
-- TypeScript
-- Vite
-- React Router
-- Axios
-- Tailwind CSS
-- Lucide Icons
-
-### Backend
-- Node.js
-- Express
-- MongoDB with Mongoose
-- JWT for authentication
-- Google Auth Library
-- bcryptjs for password hashing
-
-## 📁 Project Structure
-
-```
-Urban-Thread/
-├── backend/
-│   ├── controllers/
-│   ├── middleware/
-│   ├── models/
-│   ├── routes/
-│   ├── utils/
-│   ├── server.js
-│   └── .env
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   ├── context/
-│   │   ├── services/
-│   │   ├── App.tsx
-│   │   └── main.tsx
-│   └── .env
-├── INTEGRATION_GUIDE.md
-└── README.md
-```
-
-## 🧪 Testing
-
-### Test MongoDB Connection
-```bash
-cd backend
-node testConnection.js
-```
-
-### Test Authentication
-1. Register a new user at `/signup`
-2. Login at `/signin`
-3. Try Google Sign-In
-4. Access protected routes
-
-## 📝 Environment Variables
-
-### Backend Required
-- `MONGO_URI` - MongoDB connection string ✅ (Already configured)
-- `JWT_SECRET` - Secret key for JWT tokens
-- `JWT_EXPIRE` - Token expiration time
-
-### Backend Optional
-- `GOOGLE_CLIENT_ID` - For Google OAuth
-- `GOOGLE_CLIENT_SECRET` - For Google OAuth
-- `PORT` - Server port (default: 5000)
-
-### Frontend Required
-- `VITE_API_URL` - Backend API URL
-- `VITE_GOOGLE_CLIENT_ID` - For Google Sign-In button
-
-## 🐛 Troubleshooting
-
-### MongoDB Connection Failed
-- Check if MONGO_URI is correct
-- Verify IP whitelist in MongoDB Atlas
-- Run `node testConnection.js`
-
-### CORS Errors
-- Ensure backend CORS allows frontend URL
-- Check FRONTEND_URL in backend .env
-
-### Google OAuth Not Working
-- Verify Client ID is set in both .env files
-- Check authorized origins in Google Console
-- Ensure Google+ API is enabled
-
-## 📚 Documentation
-
-- [Integration Guide](./INTEGRATION_GUIDE.md) - Detailed setup instructions
-- [API Documentation](./backend/API_DOCUMENTATION.md) - Complete API reference
-- [Database Schema](./backend/DATABASE_SCHEMA.md) - Database structure
-
-## 🎉 Status
-
-✅ MongoDB Connected  
-✅ JWT Authentication Implemented  
-✅ Google OAuth Ready (needs credentials)  
-✅ Frontend-Backend Integration Complete  
-✅ User Management Working  
-✅ Protected Routes Configured  
-
-## 📞 Support
-
-For issues or questions, please check:
-1. [INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md)
-2. [Troubleshooting section](#-troubleshooting)
-3. Backend logs in terminal
-
-## 🚀 Next Steps
-
-1. Set up Google OAuth credentials
-2. Test all authentication flows
-3. Add products to database
-4. Implement payment gateway
-5. Deploy to production
+Full-stack e-commerce platform for fashion retail — React, TypeScript, Express, PostgreSQL (Neon DB), Redis, Clerk auth, Razorpay payments.
 
 ---
 
-**Happy Coding! 🎨**
-# Urban-Thread
+## Architecture
+
+```
+Browser (React 18 + Vite + Tailwind)
+  │  Clerk session JWT via Axios interceptor
+  ▼
+Express API (TypeScript + tsx)
+  ├─ clerkMiddleware() ── session verification
+  ├─ helmet / CORS / compression / morgan
+  ├─ rate limiting (Redis-backed in production)
+  ├─ Zod validation on all write endpoints
+  ├─ protect → JIT user provisioning from Clerk
+  ├─ authorize(...roles) → RBAC
+  └─ asyncHandler → centralised error handler
+       │          │          │
+  Neon DB     Redis      ImageKit
+  (Prisma)   (cache)    (image CDN)
+       │
+   Razorpay
+  (payments)
+```
+
+**Roles:** `customer` · `seller` · `admin`
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Frontend | React 18, TypeScript, Vite, Tailwind CSS, Radix UI, React Router |
+| Auth | Clerk (email/password + Google OAuth + OTP verification) |
+| Backend | Node.js, Express 4, TypeScript (tsx runtime) |
+| Database | PostgreSQL on Neon DB via Prisma ORM |
+| Cache | Redis (ioredis) — user sessions, product catalog, rate limiting |
+| Payments | Razorpay (HMAC-SHA256 signature verification with timing-safe compare) |
+| Storage | ImageKit (image upload + CDN) |
+| Validation | Zod 3 (request body/query/params) |
+| Logging | Winston (dev: colorized, prod: JSON + file rotation) + Morgan |
+| Security | Helmet, express-rate-limit, CORS allowlist, field whitelisting |
+
+---
+
+## Features
+
+- **Auth** — Clerk-delegated sign-up/sign-in, Google OAuth, OTP email verification, JIT DB provisioning
+- **Catalog** — Category filtering, search (ILIKE), sorting, pagination, Redis-cached listings (5 min TTL)
+- **Cart & Wishlist** — Persistent per-user, backed by PostgreSQL with unique constraints
+- **Checkout** — Saved address book, Razorpay integration (card/UPI/COD), atomic stock decrement in Prisma transaction
+- **Orders** — Line-item snapshots, status lifecycle (Processing → Delivered), server-computed totals
+- **Reviews** — 1 per user per product (DB constraint), auto-computed product rating via aggregate
+- **Seller Center** — Product CRUD with multi-image upload (up to 10)
+- **Admin Panel** — Dashboard stats (raw SQL aggregations), user/product/order management, role & status controls
+- **Redis Caching** — Auth middleware user cache (5 min), product catalog (5-10 min), graceful degradation when Redis is down
+
+---
+
+## Project Structure
+
+```
+backend/
+├── config/          prisma.ts, redis.ts, razorpay.ts, imagekit.ts
+├── controllers/     auth, product, order, cart, wishlist, review, address, user, admin, payment, upload
+├── middleware/       auth.ts (protect + authorize + cache bust), errorHandler.ts, rateLimiter.ts, validate.ts
+├── routes/          one file per resource
+├── validators/      Zod schemas per resource
+├── prisma/          schema.prisma (13 models, PostgreSQL enums)
+├── utils/           ApiError.ts, asyncHandler.ts, logger.ts
+├── types/           express.d.ts (Request augmentation)
+├── server.ts        bootstrap, middleware stack, graceful shutdown
+└── tsconfig.json
+
+frontend/
+├── src/
+│   ├── components/  pages + UI (Radix/shadcn)
+│   ├── context/     AuthContext, CartContext, WishlistContext
+│   ├── services/    api.ts (Clerk token interceptor), resource services
+│   ├── App.tsx      ClerkTokenSync + routes
+│   └── main.tsx     ClerkProvider root
+```
+
+---
+
+## Getting Started
+
+**Prerequisites:** Node.js >= 18, [Clerk](https://clerk.com) account, [Neon DB](https://neon.tech) project, Razorpay test keys, ImageKit account
+
+```bash
+git clone <repo-url> && cd Urban-Thread
+
+# Backend
+cd backend
+npm install
+cp .env.example .env        # fill in values
+npm run db:push              # create tables in Neon DB
+npm run dev                  # tsx watch server.ts
+
+# Frontend (separate terminal)
+cd frontend
+npm install
+cp .env.example .env        # fill in VITE_CLERK_PUBLISHABLE_KEY
+npm run dev                  # Vite on :5173
+```
+
+### Promote first admin
+
+```bash
+cd backend
+ADMIN_EMAIL=you@example.com npm run promote-admin
+```
+
+---
+
+## Environment Variables
+
+### Backend (`backend/.env`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `DATABASE_URL` | Yes | Neon DB pooled connection string |
+| `DATABASE_URL_UNPOOLED` | Yes | Neon DB direct connection (for migrations) |
+| `CLERK_PUBLISHABLE_KEY` | Yes | `pk_test_...` from Clerk dashboard |
+| `CLERK_SECRET_KEY` | Yes | `sk_test_...` from Clerk dashboard |
+| `REDIS_URL` | No | Redis connection string (defaults to `localhost:6379`) |
+| `ALLOWED_ORIGINS` | Yes | Comma-separated frontend URLs |
+| `RAZORPAY_KEY_ID` | Yes | `rzp_test_...` |
+| `RAZORPAY_KEY_SECRET` | Yes | Razorpay secret |
+| `ImagekitID` / `PUBLIC_KEY` / `PRIVATE_KEY` | Yes | ImageKit credentials |
+| `PORT` | No | Default: `5001` |
+| `NODE_ENV` | No | `development` / `production` |
+
+### Frontend (`frontend/.env`)
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `VITE_API_URL` | Yes | Backend base URL |
+| `VITE_CLERK_PUBLISHABLE_KEY` | Yes | `pk_test_...` |
+
+---
+
+## Scripts
+
+### Backend
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start with hot reload (`tsx watch`) |
+| `npm run dev:debug` | Start with Node inspector |
+| `npm start` | Production start (`tsx server.ts`) |
+| `npm run build` | Type-check (`tsc --noEmit`) |
+| `npm run db:push` | Push Prisma schema to database |
+| `npm run db:studio` | Open Prisma Studio (visual DB browser) |
+| `npm run db:migrate` | Create migration file |
+| `npm run seed` | Seed sample products |
+| `npm run promote-admin` | Promote user to admin by email |
+| `npm run lint` | ESLint check |
+
+### Frontend
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Vite dev server |
+| `npm run build` | Production build |
+| `npm run preview` | Preview production build |
+| `npm run type-check` | TypeScript check |
+
+---
+
+## Security
+
+| Concern | Mitigation |
+|---------|-----------|
+| Authentication | Clerk-issued short-lived JWTs, no passwords stored |
+| Authorization | Role-based middleware (`protect` + `authorize`) |
+| Input validation | Zod schemas on all write endpoints |
+| SQL injection | Prisma parameterized queries; `$queryRaw` uses tagged templates |
+| Mass assignment | Field whitelisting in update controllers |
+| Payment fraud | HMAC-SHA256 signature verification with `crypto.timingSafeEqual` |
+| Race conditions | Atomic stock decrement inside Prisma `$transaction` (decrement-then-check) |
+| Rate limiting | 4-tier: global (100/15min), auth (10/15min), payment (20/hr), upload (30/hr) |
+| CORS | Strict origin allowlist, exact-match for Razorpay domains |
+| File upload | Folder allowlist, filename regex validation |
+| Security headers | Helmet (HSTS, X-Frame-Options, etc.) |
+| Cache | Redis with graceful degradation; user cache busted on role/status changes |
+| Error leaks | Production mode hides stack traces and internal errors |
+
+---
+
+## API Endpoints
+
+All prefixed with `/api`. Protected routes require `Authorization: Bearer <clerk-token>`.
+
+| Resource | Endpoints | Access |
+|----------|-----------|--------|
+| Auth | `GET /auth/me` | Protected |
+| Users | `GET /users/profile`, `PUT /users/profile` | Protected |
+| Products | `GET /products`, `GET /products/:id`, `POST`, `PUT`, `DELETE` | Public (read) / Seller+Admin (write) |
+| Orders | `POST /orders`, `GET /orders/my-orders`, `GET /orders/:id` | Protected |
+| Cart | `GET`, `POST`, `PUT /:itemId`, `DELETE /:itemId`, `DELETE /` | Protected |
+| Wishlist | `GET`, `POST /:productId`, `DELETE /:productId` | Protected |
+| Reviews | `GET /:productId`, `POST`, `PUT /:id`, `DELETE /:id` | Public (read) / Protected (write) |
+| Addresses | `GET`, `POST`, `PUT /:id`, `DELETE /:id` | Protected |
+| Payment | `GET /razorpay-key`, `POST /create-order`, `POST /verify-payment` | Protected |
+| Upload | `GET /auth`, `POST /`, `POST /multiple`, `DELETE /:fileId` | Protected |
+| Admin | Stats, users, products, orders CRUD | Admin only |
+| Health | `GET /health` | Public |

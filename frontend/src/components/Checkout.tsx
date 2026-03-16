@@ -3,30 +3,19 @@ import { CreditCard, Wallet, Plus, MapPin } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import addressService from '../services/addressService';
-import paymentService from '../services/paymentService';
-import api from '../services/api';
+import axios from 'axios';
 
-declare global {
-  interface Window {
-    Razorpay: any;
-  }
-}
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export function Checkout() {
   const navigate = useNavigate();
   const { cartItems, getCartTotal, clearCart } = useCart();
-  const [paymentMethod, setPaymentMethod] = useState<'razorpay' | 'cod'>('razorpay');
+  const [paymentMethod, setPaymentMethod] = useState<'card' | 'upi' | 'cod'>('card');
   const [submitting, setSubmitting] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
   const [showNewAddressForm, setShowNewAddressForm] = useState(false);
   const [loadingAddresses, setLoadingAddresses] = useState(true);
-  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
-  const [promoCode, setPromoCode] = useState('');
-  const [promoApplied, setPromoApplied] = useState(false);
-  const [promoError, setPromoError] = useState('');
-  const [isFirstOrder, setIsFirstOrder] = useState(false);
-  const [checkingFirstOrder, setCheckingFirstOrder] = useState(true);
   
   // Address form state
   const [address, setAddress] = useState({
@@ -41,47 +30,13 @@ export function Checkout() {
   });
 
   const subtotal = getCartTotal();
-  const baseShipping = subtotal > 999 ? 0 : 99;
-  const shipping = promoApplied ? 0 : baseShipping;
+  const shipping = subtotal > 999 ? 0 : 99;
   const discount = 0;
   const total = subtotal + shipping - discount;
 
   useEffect(() => {
     loadSavedAddresses();
-    loadRazorpayScript();
-    checkIfFirstOrder();
   }, []);
-
-  const checkIfFirstOrder = async () => {
-    try {
-      const response = await api.get('/orders/my-orders');
-      const orders = response.data.orders || [];
-      
-      // Check if user has any completed orders
-      const hasCompletedOrders = orders.some((order: any) => 
-        order.paymentStatus === 'paid' || order.status === 'delivered'
-      );
-      
-      if (!hasCompletedOrders && orders.length === 0) {
-        setIsFirstOrder(true);
-        // Auto-apply first order promo
-        setPromoCode('FIRST2024');
-        setPromoApplied(true);
-      }
-    } catch (error) {
-      console.error('Failed to check order history:', error);
-    } finally {
-      setCheckingFirstOrder(false);
-    }
-  };
-
-  const loadRazorpayScript = () => {
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => setRazorpayLoaded(true);
-    document.body.appendChild(script);
-  };
 
   const loadSavedAddresses = async () => {
     try {
@@ -109,80 +64,8 @@ export function Checkout() {
     });
   };
 
-  const handleApplyPromo = () => {
-    const validPromoCodes = ['FREESHIP', 'FREESHIP2024', 'NODELIVERY', 'FIRST2024'];
-    
-    if (validPromoCodes.includes(promoCode.toUpperCase())) {
-      setPromoApplied(true);
-      setPromoError('');
-    } else {
-      setPromoApplied(false);
-      setPromoError('Invalid promo code');
-    }
-  };
-
-  const handleRemovePromo = () => {
-    setPromoCode('');
-    setPromoApplied(false);
-    setPromoError('');
-  };
-
   const getSelectedAddress = () => {
     return savedAddresses.find(addr => addr._id === selectedAddressId);
-  };
-
-  const handleRazorpayPayment = async (orderData: any, orderId: string) => {
-    try {
-      // Create Razorpay order
-      const { order: razorpayOrder } = await paymentService.createRazorpayOrder(total);
-      const razorpayKey = await paymentService.getRazorpayKey();
-
-      const options = {
-        key: razorpayKey,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-        name: 'UrbanThread',
-        description: 'Order Payment',
-        order_id: razorpayOrder.id,
-        handler: async function (response: any) {
-          try {
-            // Verify payment
-            await paymentService.verifyPayment({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              orderId,
-            });
-
-            // Clear cart
-            await clearCart();
-            alert('Payment successful! Order placed.');
-            navigate('/dashboard');
-          } catch (error) {
-            console.error('Payment verification failed:', error);
-            alert('Payment verification failed. Please contact support.');
-          }
-        },
-        prefill: {
-          name: orderData.shippingAddress.fullName,
-          contact: orderData.shippingAddress.phone,
-        },
-        theme: {
-          color: '#FF3B30',
-        },
-      };
-
-      const razorpay = new window.Razorpay(options);
-      razorpay.on('payment.failed', function (response: any) {
-        alert('Payment failed: ' + response.error.description);
-        setSubmitting(false);
-      });
-      razorpay.open();
-    } catch (error) {
-      console.error('Razorpay payment error:', error);
-      alert('Failed to initiate payment');
-      setSubmitting(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -193,13 +76,9 @@ export function Checkout() {
       return;
     }
 
-    if (paymentMethod === 'razorpay' && !razorpayLoaded) {
-      alert('Payment system is loading. Please try again.');
-      return;
-    }
-
     setSubmitting(true);
     try {
+      const token = localStorage.getItem('token');
       let shippingAddress;
 
       // Use selected saved address or new address
@@ -254,22 +133,19 @@ export function Checkout() {
         total,
       };
 
-      const response = await api.post('/orders', orderData);
-      const orderId = response.data.order._id;
+      await axios.post(`${API_URL}/orders`, orderData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
 
-      // Handle payment based on method
-      if (paymentMethod === 'razorpay') {
-        await handleRazorpayPayment(orderData, orderId);
-      } else if (paymentMethod === 'cod') {
-        // Clear cart for COD
-        await clearCart();
-        alert('Order placed successfully! Pay on delivery.');
-        navigate('/dashboard');
-        setSubmitting(false);
-      }
+      // Clear cart
+      await clearCart();
+      
+      alert('Order placed successfully!');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Order failed:', error);
       alert(error.response?.data?.message || 'Failed to place order');
+    } finally {
       setSubmitting(false);
     }
   };
@@ -462,7 +338,7 @@ export function Checkout() {
               <div className="space-y-4">
                 <label
                   className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
-                    paymentMethod === 'razorpay'
+                    paymentMethod === 'card'
                       ? 'border-[#FF3B30] bg-[#FF3B30]/5'
                       : 'border-gray-300 hover:border-[#FF3B30]'
                   }`}
@@ -470,19 +346,32 @@ export function Checkout() {
                   <input
                     type="radio"
                     name="payment"
-                    value="razorpay"
-                    checked={paymentMethod === 'razorpay'}
-                    onChange={() => setPaymentMethod('razorpay')}
+                    value="card"
+                    checked={paymentMethod === 'card'}
+                    onChange={() => setPaymentMethod('card')}
                     className="w-5 h-5 accent-[#FF3B30]"
                   />
                   <CreditCard className="w-6 h-6 text-[#1E1E1E]" />
-                  <div className="flex-1">
-                    <div className="text-[#1E1E1E] font-semibold">Pay Online</div>
-                    <div className="text-sm text-gray-600">Cards, UPI, Wallets & More</div>
-                  </div>
-                  <span className="px-3 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
-                    Recommended
-                  </span>
+                  <span className="text-[#1E1E1E]">Credit / Debit Card</span>
+                </label>
+
+                <label
+                  className={`flex items-center gap-4 p-4 border-2 rounded-lg cursor-pointer transition-all ${
+                    paymentMethod === 'upi'
+                      ? 'border-[#FF3B30] bg-[#FF3B30]/5'
+                      : 'border-gray-300 hover:border-[#FF3B30]'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="payment"
+                    value="upi"
+                    checked={paymentMethod === 'upi'}
+                    onChange={() => setPaymentMethod('upi')}
+                    className="w-5 h-5 accent-[#FF3B30]"
+                  />
+                  <Wallet className="w-6 h-6 text-[#1E1E1E]" />
+                  <span className="text-[#1E1E1E]">UPI / Wallets</span>
                 </label>
 
                 <label
@@ -500,30 +389,53 @@ export function Checkout() {
                     onChange={() => setPaymentMethod('cod')}
                     className="w-5 h-5 accent-[#FF3B30]"
                   />
-                  <Wallet className="w-6 h-6 text-[#1E1E1E]" />
                   <span className="text-[#1E1E1E]">Cash on Delivery</span>
                 </label>
               </div>
 
-              {paymentMethod === 'razorpay' && (
-                <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Secure Payment:</strong> You will be redirected to Razorpay's secure payment gateway to complete your transaction.
-                  </p>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    <span className="px-2 py-1 bg-white text-xs rounded border">💳 Cards</span>
-                    <span className="px-2 py-1 bg-white text-xs rounded border">📱 UPI</span>
-                    <span className="px-2 py-1 bg-white text-xs rounded border">👛 Wallets</span>
-                    <span className="px-2 py-1 bg-white text-xs rounded border">🏦 Net Banking</span>
+              {paymentMethod === 'card' && (
+                <div className="mt-6 space-y-4">
+                  <div>
+                    <label className="text-[#1E1E1E] mb-2 block">Card Number</label>
+                    <input
+                      type="text"
+                      required
+                      className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-[#FF3B30] focus:outline-none"
+                      placeholder="1234 5678 9012 3456"
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[#1E1E1E] mb-2 block">Expiry Date</label>
+                      <input
+                        type="text"
+                        required
+                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-[#FF3B30] focus:outline-none"
+                        placeholder="MM/YY"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[#1E1E1E] mb-2 block">CVV</label>
+                      <input
+                        type="text"
+                        required
+                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-[#FF3B30] focus:outline-none"
+                        placeholder="123"
+                      />
+                    </div>
                   </div>
                 </div>
               )}
 
-              {paymentMethod === 'cod' && (
-                <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-                  <p className="text-sm text-yellow-800">
-                    <strong>Note:</strong> Please keep exact change ready. COD orders may take longer to process.
-                  </p>
+              {paymentMethod === 'upi' && (
+                <div className="mt-6">
+                  <label className="text-[#1E1E1E] mb-2 block">UPI ID</label>
+                  <input
+                    type="text"
+                    required
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-[#FF3B30] focus:outline-none"
+                    placeholder="yourname@upi"
+                  />
                 </div>
               )}
             </div>
@@ -534,76 +446,6 @@ export function Checkout() {
             <div className="bg-white rounded-2xl p-6 shadow-md sticky top-24">
               <h3 className="text-[#1E1E1E] uppercase mb-6">Order Summary</h3>
 
-              {/* First Order Banner */}
-              {isFirstOrder && !checkingFirstOrder && (
-                <div className="mb-6 p-4 bg-gradient-to-r from-[#FF3B30] to-[#FF6B30] rounded-lg text-white">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-2xl">🎉</span>
-                    <h4 className="font-bold text-lg">First Order Special!</h4>
-                  </div>
-                  <p className="text-sm mb-2">
-                    Welcome! Enjoy FREE delivery on your first order with code <strong>FIRST2024</strong>
-                  </p>
-                  <p className="text-xs opacity-90">
-                    Already applied to your order ✓
-                  </p>
-                </div>
-              )}
-
-              {/* Promo Code Section */}
-              <div className="mb-6">
-                <label className="text-[#1E1E1E] font-semibold mb-2 block">Promo Code</label>
-                {promoApplied ? (
-                  <div className="flex items-center justify-between p-3 bg-green-50 border-2 border-green-500 rounded-lg">
-                    <div className="flex items-center gap-2">
-                      <span className="text-green-700 font-semibold">{promoCode.toUpperCase()}</span>
-                      <span className="text-green-600 text-sm">✓ Applied</span>
-                      {isFirstOrder && promoCode.toUpperCase() === 'FIRST2024' && (
-                        <span className="px-2 py-0.5 bg-[#FF3B30] text-white text-xs rounded-full">
-                          First Order
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleRemovePromo}
-                      className="text-red-600 hover:text-red-700 text-sm font-medium"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={promoCode}
-                        onChange={(e) => {
-                          setPromoCode(e.target.value);
-                          setPromoError('');
-                        }}
-                        placeholder="Enter promo code"
-                        className="flex-1 px-4 py-2 border-2 border-gray-300 rounded-lg focus:border-[#FF3B30] focus:outline-none uppercase"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleApplyPromo}
-                        disabled={!promoCode.trim()}
-                        className="px-6 py-2 bg-[#FF3B30] text-white rounded-lg hover:bg-[#007AFF] transition-all disabled:bg-gray-300 disabled:cursor-not-allowed"
-                      >
-                        Apply
-                      </button>
-                    </div>
-                    {promoError && (
-                      <p className="text-red-600 text-sm">{promoError}</p>
-                    )}
-                    <p className="text-gray-500 text-xs">
-                      {isFirstOrder ? 'Use FIRST2024 for free delivery on your first order' : 'Try: FREESHIP for free delivery'}
-                    </p>
-                  </div>
-                )}
-              </div>
-
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between">
                   <span className="text-gray-600">Subtotal</span>
@@ -611,27 +453,12 @@ export function Checkout() {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Shipping</span>
-                  <div className="text-right">
-                    {promoApplied && baseShipping > 0 ? (
-                      <>
-                        <span className="text-gray-400 line-through mr-2">₹{baseShipping}</span>
-                        <span className="text-green-600 font-semibold">FREE</span>
-                      </>
-                    ) : (
-                      <span className="text-[#1E1E1E]">{shipping === 0 ? 'FREE' : `₹${shipping}`}</span>
-                    )}
-                  </div>
+                  <span className="text-[#1E1E1E]">{shipping === 0 ? 'FREE' : `₹${shipping}`}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600">Discount</span>
                   <span className="text-[#FF3B30]">-₹{discount}</span>
                 </div>
-                {promoApplied && baseShipping > 0 && (
-                  <div className="flex justify-between text-green-600">
-                    <span className="font-medium">Promo Savings</span>
-                    <span className="font-semibold">-₹{baseShipping}</span>
-                  </div>
-                )}
               </div>
 
               <div className="border-t-2 border-gray-200 pt-4 mb-6">

@@ -1,4 +1,5 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth as useClerkAuth } from '@clerk/clerk-react';
 import { useAuth } from '../context/AuthContext';
 
 interface ProtectedRouteProps {
@@ -7,9 +8,12 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isLoaded, isSignedIn } = useClerkAuth();
+  const { user, loading } = useAuth();
+  const location = useLocation();
 
-  if (loading) {
+  // Wait for Clerk to initialise and for our app user to load
+  if (!isLoaded || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#FF3B30]"></div>
@@ -17,11 +21,12 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/signin" replace />;
+  // Not signed in — redirect to Clerk's sign-in page, preserving intended destination
+  if (!isSignedIn) {
+    return <Navigate to="/signin" state={{ from: location }} replace />;
   }
 
-  // Check role-based access
+  // Role-based access control — wait for appUser to be provisioned
   if (requiredRole && user?.role !== requiredRole) {
     return <Navigate to="/dashboard" replace />;
   }

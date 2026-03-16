@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Search, Heart, ShoppingCart, User, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -11,12 +12,14 @@ export function Navbar() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isSignedIn } = useClerkAuth();
+  const { signOut } = useClerk();
+  const { user } = useAuth();
   const { getCartCount } = useCart();
   const { wishlist } = useWishlist();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut();
     setShowDropdown(false);
     navigate('/');
   };
@@ -75,7 +78,7 @@ export function Navbar() {
             >
               <Search className="w-5 h-5 text-[#1E1E1E]" />
             </button>
-            {isAuthenticated && (
+            {isSignedIn && (
               <>
                 <Link to="/wishlist" className="p-2 hover:bg-gray-100 rounded-full transition-colors relative">
                   <Heart className="w-5 h-5 text-[#1E1E1E]" />
@@ -104,7 +107,7 @@ export function Navbar() {
               </button>
               {showDropdown && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 border border-gray-200">
-                  {isAuthenticated ? (
+                  {isSignedIn ? (
                     <>
                       {user && (
                         <div className="px-4 py-2 border-b border-gray-200">

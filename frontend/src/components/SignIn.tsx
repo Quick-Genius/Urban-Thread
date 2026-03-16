@@ -1,156 +1,63 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Mail, Lock, Chrome, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+import { useSignIn, useAuth as useClerkAuth } from '@clerk/clerk-react';
 
 export function SignIn() {
   const navigate = useNavigate();
-  const { login, googleLogin, isAuthenticated } = useAuth();
+  const location = useLocation();
+  const { isLoaded, signIn, setActive } = useSignIn();
+  const { isSignedIn } = useClerkAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, navigate]);
+  // Destination after sign-in (respects ProtectedRoute redirect)
+  const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/dashboard';
 
   useEffect(() => {
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    
-    if (!googleClientId || googleClientId === 'your-google-client-id') {
-      return;
+    if (isSignedIn) {
+      navigate(from, { replace: true });
     }
-
-    // Check if script already exists
-    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-    
-    if (existingScript) {
-      // Script already loaded, just initialize
-      if (window.google) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: googleClientId,
-            callback: handleGoogleResponse,
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          });
-        } catch (error) {
-          console.error('Google Sign-In initialization error:', error);
-        }
-      }
-      return;
-    }
-
-    // Load Google Sign-In script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      if (window.google) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: googleClientId,
-            callback: handleGoogleResponse,
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          });
-        } catch (error) {
-          console.error('Google Sign-In initialization error:', error);
-        }
-      }
-    };
-
-    script.onerror = () => {
-      console.error('Failed to load Google Sign-In script');
-    };
-
-    return () => {
-      // Don't remove script on unmount to avoid reloading
-    };
-  }, []);
-
-  const handleGoogleResponse = async (response: any) => {
-    try {
-      setLoading(true);
-      setError('');
-      await googleLogin(response.credential);
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Google sign-in failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [isSignedIn, navigate, from]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!isLoaded) return;
     setError('');
     setLoading(true);
 
     try {
-      await login({ email, password });
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Invalid email or password');
+      const result = await signIn.create({ identifier: email, password });
+
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        navigate(from, { replace: true });
+      } else {
+        setError('Sign-in requires additional verification. Please try again.');
+      }
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: Array<{ message: string }> };
+      setError(clerkError.errors?.[0]?.message || 'Invalid email or password');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignIn = () => {
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    
-    if (!googleClientId || googleClientId === 'your-google-client-id') {
-      setError('Google Sign-In is not configured yet. Please contact support or use email/password login.');
-      return;
-    }
-    
-    if (window.google) {
-      try {
-        // Create a hidden div to render the Google button
-        const existingDiv = document.getElementById('google-signin-button-hidden');
-        if (existingDiv) {
-          existingDiv.remove();
-        }
-
-        const buttonDiv = document.createElement('div');
-        buttonDiv.id = 'google-signin-button-hidden';
-        buttonDiv.style.position = 'absolute';
-        buttonDiv.style.opacity = '0';
-        buttonDiv.style.pointerEvents = 'none';
-        document.body.appendChild(buttonDiv);
-
-        window.google.accounts.id.renderButton(buttonDiv, {
-          theme: 'outline',
-          size: 'large',
-        });
-
-        // Trigger click on the rendered button
-        setTimeout(() => {
-          const googleButton = buttonDiv.querySelector('div[role="button"]');
-          if (googleButton) {
-            (googleButton as HTMLElement).click();
-          }
-        }, 100);
-      } catch (error) {
-        console.error('Google Sign-In error:', error);
-        setError('Failed to initialize Google Sign-In. Please try again.');
-      }
-    } else {
-      setError('Google Sign-In is loading. Please try again in a moment.');
+  const handleGoogleSignIn = async () => {
+    if (!isLoaded) return;
+    try {
+      await signIn.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl: '/sso-callback',
+        redirectUrlComplete: from,
+      });
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: Array<{ message: string }> };
+      setError(clerkError.errors?.[0]?.message || 'Google sign-in failed');
     }
   };
 
@@ -174,7 +81,7 @@ export function SignIn() {
               <span>{error}</span>
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="text-[#1E1E1E] mb-2 block">Email</label>
@@ -219,19 +126,9 @@ export function SignIn() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" className="w-4 h-4 accent-[#FF3B30]" />
-                <span className="text-gray-600">Remember me</span>
-              </label>
-              <Link to="/forgot-password" className="text-[#FF3B30] hover:text-[#007AFF] transition-colors">
-                Forgot Password?
-              </Link>
-            </div>
-
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isLoaded}
               className="w-full px-6 py-3 bg-[#FF3B30] text-white uppercase rounded-lg hover:bg-[#007AFF] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Signing In...' : 'Sign In'}
@@ -251,7 +148,8 @@ export function SignIn() {
             <button
               onClick={handleGoogleSignIn}
               type="button"
-              className="mt-6 w-full flex items-center justify-center gap-3 px-6 py-3 border-2 border-gray-300 rounded-lg hover:border-[#FF3B30] hover:bg-gray-50 transition-all"
+              disabled={!isLoaded}
+              className="mt-6 w-full flex items-center justify-center gap-3 px-6 py-3 border-2 border-gray-300 rounded-lg hover:border-[#FF3B30] hover:bg-gray-50 transition-all disabled:opacity-50"
             >
               <Chrome className="w-5 h-5" />
               <span className="text-[#1E1E1E]">Sign in with Google</span>

@@ -1,17 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User as UserIcon, Chrome, AlertCircle, Eye, EyeOff } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-
-declare global {
-  interface Window {
-    google: any;
-  }
-}
+import { useSignUp, useAuth as useClerkAuth } from '@clerk/clerk-react';
 
 export function SignUp() {
   const navigate = useNavigate();
-  const { register, googleLogin, isAuthenticated } = useAuth();
+  const { isLoaded, signUp, setActive } = useSignUp();
+  const { isSignedIn } = useClerkAuth();
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -21,153 +17,133 @@ export function SignUp() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard');
-    }
-  }, [isAuthenticated, navigate]);
+  // Email verification step
+  const [pendingVerification, setPendingVerification] = useState(false);
+  const [code, setCode] = useState('');
 
   useEffect(() => {
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    
-    if (!googleClientId || googleClientId === 'your-google-client-id') {
-      return;
-    }
-
-    // Check if script already exists
-    const existingScript = document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-    
-    if (existingScript) {
-      // Script already loaded, just initialize
-      if (window.google) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: googleClientId,
-            callback: handleGoogleResponse,
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          });
-        } catch (error) {
-          console.error('Google Sign-In initialization error:', error);
-        }
-      }
-      return;
-    }
-
-    // Load Google Sign-In script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    document.body.appendChild(script);
-
-    script.onload = () => {
-      if (window.google) {
-        try {
-          window.google.accounts.id.initialize({
-            client_id: googleClientId,
-            callback: handleGoogleResponse,
-            auto_select: false,
-            cancel_on_tap_outside: true,
-          });
-        } catch (error) {
-          console.error('Google Sign-In initialization error:', error);
-        }
-      }
-    };
-
-    script.onerror = () => {
-      console.error('Failed to load Google Sign-In script');
-    };
-
-    return () => {
-      // Don't remove script on unmount to avoid reloading
-    };
-  }, []);
-
-  const handleGoogleResponse = async (response: any) => {
-    try {
-      setLoading(true);
-      setError('');
-      await googleLogin(response.credential);
+    if (isSignedIn) {
       navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Google sign-up failed');
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [isSignedIn, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
+    if (!isLoaded) return;
     if (password !== confirmPassword) {
-      setError('Passwords do not match!');
+      setError('Passwords do not match');
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
-      return;
-    }
-
+    setError('');
     setLoading(true);
 
     try {
-      await register({ name, email, password });
-      navigate('/dashboard');
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Registration failed. Please try again.');
+      const [firstName, ...rest] = name.trim().split(' ');
+      await signUp.create({
+        firstName,
+        lastName: rest.join(' ') || undefined,
+        emailAddress: email,
+        password,
+      });
+
+      // Send verification email
+      await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+      setPendingVerification(true);
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: Array<{ message: string }> };
+      setError(clerkError.errors?.[0]?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleGoogleSignUp = () => {
-    const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    
-    if (!googleClientId || googleClientId === 'your-google-client-id') {
-      setError('Google Sign-In is not configured yet. Please contact support or use email/password registration.');
-      return;
-    }
-    
-    if (window.google) {
-      try {
-        // Create a hidden div to render the Google button
-        const existingDiv = document.getElementById('google-signup-button-hidden');
-        if (existingDiv) {
-          existingDiv.remove();
-        }
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isLoaded) return;
+    setError('');
+    setLoading(true);
 
-        const buttonDiv = document.createElement('div');
-        buttonDiv.id = 'google-signup-button-hidden';
-        buttonDiv.style.position = 'absolute';
-        buttonDiv.style.opacity = '0';
-        buttonDiv.style.pointerEvents = 'none';
-        document.body.appendChild(buttonDiv);
-
-        window.google.accounts.id.renderButton(buttonDiv, {
-          theme: 'outline',
-          size: 'large',
-        });
-
-        // Trigger click on the rendered button
-        setTimeout(() => {
-          const googleButton = buttonDiv.querySelector('div[role="button"]');
-          if (googleButton) {
-            (googleButton as HTMLElement).click();
-          }
-        }, 100);
-      } catch (error) {
-        console.error('Google Sign-In error:', error);
-        setError('Failed to initialize Google Sign-In. Please try again.');
+    try {
+      const result = await signUp.attemptEmailAddressVerification({ code });
+      if (result.status === 'complete') {
+        await setActive({ session: result.createdSessionId });
+        navigate('/dashboard');
+      } else {
+        setError('Verification incomplete. Please try again.');
       }
-    } else {
-      setError('Google Sign-In is loading. Please try again in a moment.');
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: Array<{ message: string }> };
+      setError(clerkError.errors?.[0]?.message || 'Invalid verification code');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleGoogleSignUp = async () => {
+    if (!isLoaded) return;
+    try {
+      await signUp.authenticateWithRedirect({
+        strategy: 'oauth_google',
+        redirectUrl: '/sso-callback',
+        redirectUrlComplete: '/dashboard',
+      });
+    } catch (err: unknown) {
+      const clerkError = err as { errors?: Array<{ message: string }> };
+      setError(clerkError.errors?.[0]?.message || 'Google sign-up failed');
+    }
+  };
+
+  // ── Email verification screen ───────────────────────────────────────────
+  if (pendingVerification) {
+    return (
+      <div className="bg-[#FAFAFA] min-h-screen flex items-center justify-center py-12 px-4">
+        <div className="max-w-md w-full">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-[#FF3B30] rounded-2xl mb-4">
+              <span className="text-white uppercase tracking-wider">UT</span>
+            </div>
+            <h1 className="text-[#1E1E1E] uppercase mb-2">Verify Your Email</h1>
+            <p className="text-gray-600">We sent a 6-digit code to <strong>{email}</strong></p>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-lg p-8">
+            {error && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span>{error}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleVerify} className="space-y-6">
+              <div>
+                <label className="text-[#1E1E1E] mb-2 block">Verification Code</label>
+                <input
+                  type="text"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  maxLength={6}
+                  required
+                  className="w-full px-4 py-3 text-center text-2xl tracking-widest border-2 border-gray-300 rounded-lg focus:border-[#FF3B30] focus:outline-none transition-colors"
+                  placeholder="000000"
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full px-6 py-3 bg-[#FF3B30] text-white uppercase rounded-lg hover:bg-[#007AFF] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Verifying...' : 'Verify Email'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Registration screen ────────────────────────────────────────────────
   return (
     <div className="bg-[#FAFAFA] min-h-screen flex items-center justify-center py-12 px-4">
       <div className="max-w-md w-full">
@@ -177,10 +153,9 @@ export function SignUp() {
             <span className="text-white uppercase tracking-wider">UT</span>
           </div>
           <h1 className="text-[#1E1E1E] uppercase mb-2">Create Account</h1>
-          <p className="text-gray-600">Join the UrbanThread community</p>
+          <p className="text-gray-600">Join UrbanThread today</p>
         </div>
 
-        {/* Sign Up Form */}
         <div className="bg-white rounded-2xl shadow-lg p-8">
           {error && (
             <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2 text-red-700">
@@ -188,7 +163,7 @@ export function SignUp() {
               <span>{error}</span>
             </div>
           )}
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label className="text-[#1E1E1E] mb-2 block">Full Name</label>
@@ -276,12 +251,15 @@ export function SignUp() {
               </div>
             </div>
 
+            {/* Clerk bot protection CAPTCHA widget */}
+            <div id="clerk-captcha" />
+
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !isLoaded}
               className="w-full px-6 py-3 bg-[#FF3B30] text-white uppercase rounded-lg hover:bg-[#007AFF] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? 'Creating Account...' : 'Sign Up'}
+              {loading ? 'Creating Account...' : 'Create Account'}
             </button>
           </form>
 
@@ -298,10 +276,11 @@ export function SignUp() {
             <button
               onClick={handleGoogleSignUp}
               type="button"
-              className="mt-6 w-full flex items-center justify-center gap-3 px-6 py-3 border-2 border-gray-300 rounded-lg hover:border-[#FF3B30] hover:bg-gray-50 transition-all"
+              disabled={!isLoaded}
+              className="mt-6 w-full flex items-center justify-center gap-3 px-6 py-3 border-2 border-gray-300 rounded-lg hover:border-[#FF3B30] hover:bg-gray-50 transition-all disabled:opacity-50"
             >
               <Chrome className="w-5 h-5" />
-              <span className="text-[#1E1E1E]">Continue with Google</span>
+              <span className="text-[#1E1E1E]">Sign up with Google</span>
             </button>
           </div>
 

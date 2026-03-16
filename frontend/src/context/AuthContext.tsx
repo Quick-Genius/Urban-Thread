@@ -1,12 +1,20 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import authService, { User, LoginData, RegisterData } from '../services/authService';
+import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
+import api from '../services/api';
+
+interface AppUser {
+  id: string;
+  clerkId: string;
+  name: string;
+  email: string;
+  role: string;
+  avatar?: string;
+  phone?: string;
+}
 
 interface AuthContextType {
-  user: User | null;
+  user: AppUser | null;
   loading: boolean;
-  login: (data: LoginData) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
-  googleLogin: (credential: string) => Promise<void>;
   logout: () => void;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
@@ -15,65 +23,47 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { isLoaded, isSignedIn } = useUser();
+  const { signOut } = useClerk();
+  const [appUser, setAppUser] = useState<AppUser | null>(null);
+  const [fetching, setFetching] = useState(false);
 
+  // Fetch/provision our MongoDB user whenever Clerk session state resolves
   useEffect(() => {
-    // Check if user is logged in on mount
-    const initAuth = async () => {
-      const token = authService.getToken();
-      if (token) {
-        try {
-          const userData = await authService.getMe();
-          setUser(userData);
-        } catch (error) {
-          authService.logout();
-        }
-      }
-      setLoading(false);
-    };
+    if (!isLoaded) return;
 
-    initAuth();
-  }, []);
-
-  const login = async (data: LoginData) => {
-    const response = await authService.login(data);
-    setUser(response.user);
-  };
-
-  const register = async (data: RegisterData) => {
-    const response = await authService.register(data);
-    setUser(response.user);
-  };
-
-  const googleLogin = async (credential: string) => {
-    const response = await authService.googleAuth(credential);
-    setUser(response.user);
-  };
+    if (isSignedIn) {
+      setFetching(true);
+      api
+        .get('/auth/me')
+        .then((res) => setAppUser(res.data.user))
+        .catch(() => setAppUser(null))
+        .finally(() => setFetching(false));
+    } else {
+      setAppUser(null);
+    }
+  }, [isLoaded, isSignedIn]);
 
   const logout = () => {
-    authService.logout();
-    setUser(null);
+    signOut();
+    setAppUser(null);
   };
 
   const refreshUser = async () => {
     try {
-      const userData = await authService.getMe();
-      setUser(userData);
-    } catch (error) {
-      console.error('Failed to refresh user data:', error);
+      const res = await api.get('/auth/me');
+      setAppUser(res.data.user);
+    } catch {
+      // silently ignore
     }
   };
 
-  const value = {
-    user,
-    loading,
-    login,
-    register,
-    googleLogin,
+  const value: AuthContextType = {
+    user: appUser,
+    loading: !isLoaded || fetching,
     logout,
     refreshUser,
-    isAuthenticated: !!user,
+    isAuthenticated: !!appUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -86,3 +76,6 @@ export function useAuth() {
   }
   return context;
 }
+
+// Re-export Clerk's useAuth as useClerkSession for components that need raw token
+export { useClerkAuth as useClerkSession };

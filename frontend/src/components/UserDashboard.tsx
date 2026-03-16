@@ -290,18 +290,18 @@ export function UserDashboard() {
               <div className="space-y-3">
                 <h2 className="text-[#1E1E1E] uppercase mb-4">My Orders</h2>
                 {orders.length === 0 ? (
-                  <div className="bg-white rounded-2xl p-12 shadow-md text-center">
-                    <Package className="w-16 h-16 mx-auto text-gray-400 mb-6" />
+                  <div className="bg-white rounded-2xl py-16 px-8 shadow-md text-center">
+                    <Package className="w-16 h-16 mx-auto text-gray-300 mb-6" />
                     <h3 className="text-[#1E1E1E] text-xl font-semibold mb-3">No Orders Yet</h3>
-                    <p className="text-gray-600 mb-8">Start shopping to see your orders here!</p>
-                    <a href="/products/all" className="inline-block px-8 py-3 bg-[#FF3B30] text-white rounded-lg hover:bg-[#007AFF] transition-colors shadow-md">
+                    <p className="text-gray-500 mb-8 max-w-sm mx-auto">Start shopping to see your orders here!</p>
+                    <Link to="/products/all" className="inline-block px-8 py-3 bg-[#FF3B30] text-white rounded-lg hover:bg-[#007AFF] transition-colors shadow-md">
                       Start Shopping
-                    </a>
+                    </Link>
                   </div>
                 ) : (
                   orders.map((order) => (
-                    <div key={order._id} className="bg-white rounded-2xl p-6 shadow-md">
-                      <div className="flex justify-between items-start mb-4">
+                    <div key={order._id} className="bg-white rounded-2xl p-8 shadow-md">
+                      <div className="flex justify-between items-start mb-6">
                         <div>
                           <h4 className="text-[#1E1E1E] font-semibold">Order #{order._id.slice(-8).toUpperCase()}</h4>
                           <p className="text-gray-600 text-sm">Placed on {new Date(order.createdAt).toLocaleDateString('en-IN', { 
@@ -319,7 +319,7 @@ export function UserDashboard() {
                       </div>
 
                       {/* Order Items */}
-                      <div className="space-y-3 mb-4">
+                      <div className="space-y-4 mb-6">
                         {order.items.slice(0, 2).map((item: any, index: number) => (
                           <div key={index} className="flex items-center gap-4">
                             <img 
@@ -370,65 +370,78 @@ export function UserDashboard() {
             {activeTab === 'wishlist' && (
               <div>
                 <h2 className="text-[#1E1E1E] uppercase mb-4">My Wishlist</h2>
+
                 {loading ? (
-                  <div className="bg-white rounded-2xl p-12 shadow-md text-center">
-                    <p className="text-gray-600">Loading wishlist...</p>
+                  <div className="bg-white rounded-2xl py-16 px-8 shadow-md text-center">
+                    <p className="text-gray-500">Loading wishlist...</p>
                   </div>
                 ) : !wishlist || wishlist.products.length === 0 ? (
-                  <div className="bg-white rounded-2xl p-12 shadow-md text-center">
-                    <Heart className="w-16 h-16 mx-auto text-gray-400 mb-6" />
+                  <div className="bg-white rounded-2xl py-16 px-8 shadow-md text-center">
+                    <Heart className="w-16 h-16 mx-auto text-gray-300 mb-6" />
                     <h3 className="text-[#1E1E1E] text-xl font-semibold mb-3">Your Wishlist is Empty</h3>
-                    <p className="text-gray-600 mb-8">Save your favorite items here!</p>
+                    <p className="text-gray-500 mb-8 max-w-sm mx-auto">Save your favorite items here!</p>
                     <Link to="/products/all" className="inline-block px-8 py-3 bg-[#FF3B30] text-white rounded-lg hover:bg-[#007AFF] transition-colors shadow-md">
                       Browse Products
                     </Link>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="space-y-4">
                     {wishlist.products.map((product) => (
-                      <div key={product._id} className="bg-white rounded-2xl shadow-md overflow-hidden group relative">
-                        <button
-                          onClick={() => handleRemoveFromWishlist(product._id)}
-                          className="absolute top-4 right-4 z-10 p-2 bg-white rounded-full shadow-md hover:bg-red-50 transition-colors"
-                          title="Remove from wishlist"
-                        >
-                          <Heart className="w-5 h-5 fill-[#FF3B30] text-[#FF3B30]" />
-                        </button>
-                        <Link to={`/products/${product._id}`}>
-                          <img
-                            src={product.images?.[0] || '/placeholder.png'}
-                            alt={product.name}
-                            className="w-full h-48 object-cover"
-                          />
-                        </Link>
-                        <div className="p-4">
-                          <Link to={`/products/${product._id}`}>
-                            <h4 className="text-[#1E1E1E] mb-2 hover:text-[#FF3B30] transition-colors">{product.name}</h4>
+                      <div key={product._id} className="bg-white rounded-2xl p-6 shadow-md">
+                        <div className="flex gap-5">
+                          <Link to={`/products/${product._id}`} className="shrink-0">
+                            <img
+                              src={product.images?.[0] || '/placeholder.png'}
+                              alt={product.name}
+                              className="w-28 h-28 object-cover rounded-xl"
+                            />
                           </Link>
-                          {product.rating !== undefined && (
-                            <div className="flex items-center mb-2">
-                              {[...Array(5)].map((_, i) => (
-                                <Star
-                                  key={i}
-                                  className={`w-4 h-4 ${
-                                    i < Math.floor(product.rating || 0)
-                                      ? 'fill-[#FF3B30] text-[#FF3B30]'
-                                      : 'text-gray-300'
-                                  }`}
-                                />
-                              ))}
-                              <span className="ml-2 text-gray-600 text-sm">({product.rating?.toFixed(1)})</span>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-start gap-3">
+                              <div className="min-w-0">
+                                <Link to={`/products/${product._id}`}>
+                                  <h4 className="text-[#1E1E1E] font-semibold hover:text-[#FF3B30] transition-colors truncate">{product.name}</h4>
+                                </Link>
+                                {product.rating !== undefined && (
+                                  <div className="flex items-center mt-1.5">
+                                    {[...Array(5)].map((_, i) => (
+                                      <Star
+                                        key={i}
+                                        className={`w-4 h-4 ${
+                                          i < Math.floor(product.rating || 0)
+                                            ? 'fill-[#FF3B30] text-[#FF3B30]'
+                                            : 'text-gray-200'
+                                        }`}
+                                      />
+                                    ))}
+                                    <span className="ml-2 text-gray-500 text-sm">({product.rating?.toFixed(1)})</span>
+                                  </div>
+                                )}
+                                <p className="text-[#1E1E1E] font-bold text-lg mt-2">₹{product.price?.toLocaleString()}</p>
+                              </div>
+                              <button
+                                onClick={() => handleRemoveFromWishlist(product._id)}
+                                className="shrink-0 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                                title="Remove from wishlist"
+                              >
+                                <Heart className="w-5 h-5 fill-[#FF3B30] text-[#FF3B30]" />
+                              </button>
                             </div>
-                          )}
-                          <div className="flex justify-between items-center mt-4">
-                            <p className="text-[#1E1E1E] font-semibold text-lg">₹{product.price?.toLocaleString()}</p>
-                            <button
-                              onClick={() => handleAddToCart(product)}
-                              className="flex items-center gap-2 px-4 py-2 bg-[#FF3B30] text-white rounded-lg hover:bg-[#007AFF] transition-colors"
-                            >
-                              <ShoppingCart className="w-4 h-4" />
-                              Add to Cart
-                            </button>
+                            <div className="flex gap-3 mt-4">
+                              <button
+                                onClick={() => handleAddToCart(product)}
+                                className="flex items-center gap-2 px-5 py-2.5 bg-[#FF3B30] text-white text-sm font-medium rounded-lg hover:bg-[#007AFF] transition-colors"
+                              >
+                                <ShoppingCart className="w-4 h-4" />
+                                Add to Cart
+                              </button>
+                              <Link
+                                to={`/products/${product._id}`}
+                                className="px-5 py-2.5 border-2 border-gray-300 text-[#1E1E1E] text-sm font-medium rounded-lg hover:border-[#FF3B30] transition-colors"
+                              >
+                                View Product
+                              </Link>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -524,10 +537,10 @@ export function UserDashboard() {
               user?.role === 'admin' ? (
                 <AdminProductsTab />
               ) : (
-                <div className="bg-white rounded-2xl p-12 shadow-md text-center">
-                  <ShieldCheck className="w-16 h-16 mx-auto text-red-500 mb-6" />
+                <div className="bg-white rounded-2xl py-16 px-8 shadow-md text-center">
+                  <ShieldCheck className="w-16 h-16 mx-auto text-gray-300 mb-6" />
                   <h3 className="text-[#1E1E1E] text-xl font-semibold mb-3">Not Authorized</h3>
-                  <p className="text-gray-600">You don't have permission to access this section.</p>
+                  <p className="text-gray-500 max-w-sm mx-auto">You don't have permission to access this section.</p>
                 </div>
               )
             )}
@@ -670,14 +683,14 @@ export function UserDashboard() {
 
                 {/* Address List */}
                 {loading ? (
-                  <div className="bg-white rounded-2xl p-12 shadow-md text-center">
-                    <p className="text-gray-600">Loading addresses...</p>
+                  <div className="bg-white rounded-2xl py-16 px-8 shadow-md text-center">
+                    <p className="text-gray-500">Loading addresses...</p>
                   </div>
                 ) : addresses.length === 0 && !showAddressForm ? (
-                  <div className="bg-white rounded-2xl p-12 shadow-md text-center">
-                    <MapPin className="w-16 h-16 mx-auto text-gray-400 mb-6" />
+                  <div className="bg-white rounded-2xl py-16 px-8 shadow-md text-center">
+                    <MapPin className="w-16 h-16 mx-auto text-gray-300 mb-6" />
                     <h3 className="text-[#1E1E1E] text-xl font-semibold mb-3">No Saved Addresses</h3>
-                    <p className="text-gray-600 mb-8">Add an address for faster checkout!</p>
+                    <p className="text-gray-500 mb-8 max-w-sm mx-auto">Add an address for faster checkout!</p>
                     <button
                       onClick={() => {
                         setShowAddressForm(true);

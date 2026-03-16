@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -9,31 +9,36 @@ const api = axios.create({
   },
 });
 
-// Add token to requests
+/**
+ * Module-level token getter set by ClerkTokenSync in App.tsx.
+ * Clerk tokens are short-lived JWTs — we retrieve a fresh one per request.
+ */
+let _getToken: (() => Promise<string | null>) | null = null;
+
+export const setClerkTokenGetter = (fn: () => Promise<string | null>) => {
+  _getToken = fn;
+};
+
 api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+  async (config) => {
+    if (_getToken) {
+      const token = await _getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error),
 );
 
-// Handle response errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/signin';
-    }
+    // 401 from our backend means the Clerk session is invalid/expired
+    // Clerk's SDK will handle redirecting to sign-in automatically
     return Promise.reject(error);
-  }
+  },
 );
 
 export default api;
